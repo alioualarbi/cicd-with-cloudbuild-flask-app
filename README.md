@@ -134,8 +134,7 @@ Fill out the following options as below:
 - **Build configuration**, select Cloud Build configuration file.
 - **Cloud Build configuration file location** field, type cloudbuild.yaml after the /.
 
-
-Click Create to save your build trigger.
+Click **Create** to save your build trigger.
 
 Push the application code to *Cloud Source Repositories* to trigger the CI pipeline in Cloud Build.
 
@@ -216,4 +215,145 @@ steps:
     $(git log --format=%B -n 1 $COMMIT_SHA)" && \
     # Push the changes back to Cloud Source Repository
     git push origin production
-    ```
+ 
+ ```
+### Create a candidate branch and push both branches for them to be available in Cloud Source Repositories.
+
+```
+git checkout -b candidate
+git push origin production
+git push origin candidate
+```
+
+Grant the Source Repository Writer IAM role to the Cloud Build service account for the hello-cloudbuild-env repository.
+
+```
+PROJECT_NUMBER="$(gcloud projects describe ${PROJECT_ID} \
+    --format='get(projectNumber)')"
+```
+```
+cat >/tmp/hello-cloudbuild-env-policy.yaml <<EOF
+bindings:
+- members:
+  - serviceAccount:${PROJECT_NUMBER}@cloudbuild.gserviceaccount.com
+  role: roles/source.writer
+EOF
+```
+```
+gcloud source repos set-iam-policy \
+    hello-cloudbuild-env /tmp/hello-cloudbuild-env-policy.yaml
+```
+
+## Creating the trigger for the continuous delivery pipeline
+
+Configure the Cloud Build to be triggered by a push to the candidate branch of the hello-cloudbuild-env repository.
+Open the Triggers page of Cloud Build > Triggers > Create trigger.
+
+Fill out the following options:
+
+- **Name** field, type hello-cloudbuild-deploy.
+- **Event**, select Push to a branch.
+- **Source**, select hello-cloudbuild-env as your Repository and ^candidate$ as your Branch.
+- **Build configuration**, select Cloud Build configuration file (yaml or json).
+- **Cloud Build configuration file location** location field, type cloudbuild.yaml after the /.
+
+Click **Create**.
+
+### Modifying the continuous integration pipeline to trigger the continuous delivery pipeline
+
+Add some steps to the continuous integration pipeline that generates a new version of the Kubernetes manifest and push it to the hello-cloudbuild-env repository to trigger the continuous delivery pipeline.
+
+Replace the *cloudbuild.yaml* file with the extended example in the *cloudbuild-trigger-cd.yaml* file.
+
+```
+cd ~/hello-cloudbuild-app
+cp cloudbuild-trigger-cd.yaml cloudbuild.yaml
+```
+
+The *cloudbuild-trigger-cd.yaml* is an extended version of the *cloudbuild.yaml file*. It adds steps to generate the new Kubernetes manifest and trigger the continuous delivery pipeline.
+
+```
+# This step clones the hello-cloudbuild-env repository
+- name: 'gcr.io/cloud-builders/gcloud'
+  id: Clone env repository
+  entrypoint: /bin/sh
+  args:
+  - '-c'
+  - |
+    gcloud source repos clone hello-cloudbuild-env && \
+    cd hello-cloudbuild-env && \
+    git checkout candidate && \
+    git config user.email $(gcloud auth list --filter=status:ACTIVE --format='value(account)')
+
+# This step generates the new manifest
+- name: 'gcr.io/cloud-builders/gcloud'
+  id: Generate manifest
+  entrypoint: /bin/sh
+  args:
+  - '-c'
+  - |
+     sed "s/GOOGLE_CLOUD_PROJECT/${PROJECT_ID}/g" kubernetes.yaml.tpl | \
+     sed "s/COMMIT_SHA/${SHORT_SHA}/g" > hello-cloudbuild-env/kubernetes.yaml
+
+# This step pushes the manifest back to hello-cloudbuild-env
+- name: 'gcr.io/cloud-builders/gcloud'
+  id: Push manifest
+  entrypoint: /bin/sh
+  args:
+  - '-c'
+  - |
+    set -x && \
+    cd hello-cloudbuild-env && \
+    git add kubernetes.yaml && \
+    git commit -m "Deploying image gcr.io/${PROJECT_ID}/hello-cloudbuild:${SHORT_SHA}
+    Built from commit ${COMMIT_SHA} of repository hello-cloudbuild-app
+    Author: $(git log --format='%an <%ae>' -n 1 HEAD)" && \
+    git push origin candidate
+```
+
+Commit the modifications and push them to Cloud Source Repositories.
+
+```
+cd ~/hello-cloudbuild-app
+git add cloudbuild.yaml
+git commit -m "Trigger CD pipeline"
+git push google master
+```
+
+This triggers the continuous integration pipeline in Cloud Build.
+
+**- Examine the continuous integration build.**
+- 
+Go to Cloud Build, your recently run and finished builds for the *hello-cloudbuild-app* repository appear. You can click on a build to follow its execution and examine its logs. The last step of this pipeline pushes the new manifest to the hello-cloudbuild-env repository, which triggers the continuous delivery pipeline.
+
+**- Examine the continuous delivery build.**
+
+Go to Cloud Build,your recently run and finished builds for the hello-cloudbuild-env repository appear. You can click on a build to follow its execution and examine its logs.
+
+## Testing the complete pipeline
+
+The complete CI/CD pipeline is now configured. You test it from end to end.
+Go to the GKE Services page > Go to Google Kubernetes Engine Services
+The list contains a single service called hello-cloudbuild created by the recently completed continuous delivery build.
+
+Click on the endpoint for the hello-cloudbuild service. "Hello World!" appears. If there is no endpoint, or if you see a load balancer error, you might have to wait a few minutes for the load balancer to be completely initialized. 
+
+Replace "Hello World" by "Hello Cloud Build", both in the application and in the unit test.
+
+```
+cd ~/hello-cloudbuild-app
+sed -i 's/Hello World/Hello Cloud Build/g' app.py
+sed -i 's/Hello World/Hello Cloud Build/g' test_app.py
+```
+
+Commit and push the change to Cloud Source Repositories.
+
+```
+git add app.py test_app.py
+git commit -m "Hello Cloud Build"
+git push google master
+```
+
+This triggers the full CI/CD pipeline.
+After a few minutes, reload the application in your browser. "Hello Cloud Build!" appears.
+
