@@ -323,7 +323,7 @@ git push google master
 This triggers the continuous integration pipeline in Cloud Build.
 
 **Examine the continuous integration build.**
-- 
+
 Go to Cloud Build, your recently run and finished builds for the *hello-cloudbuild-app* repository appear. You can click on a build to follow its execution and examine its logs. The last step of this pipeline pushes the new manifest to the hello-cloudbuild-env repository, which triggers the continuous delivery pipeline.
 
 **Examine the continuous delivery build.**
