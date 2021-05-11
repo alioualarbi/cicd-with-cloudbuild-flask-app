@@ -1,5 +1,13 @@
 # CI/CD With cloudbuild 
-![img]()
+
+In this example show and explains how to create a continuous integration and delivery (CI/CD) pipeline on Google Cloud using only hosted products and the popular GitOps methodology.
+
+![img](https://github.com/alioualarbi/cicd-with-cloudbuild/blob/main/operations_flow.png)
+
+At the end you create a CI/CD pipeline that automatically builds a container image from committed code, stores the image in Container Registry, updates a Kubernetes manifest in a Git repository, and deploys the application to Google Kubernetes Engine (GKE) using that manifest.
+
+![img](https://github.com/alioualarbi/cicd-with-cloudbuild/blob/main/steps_stages.png)
+
 If the ```gcloud config get-value project``` command does not return the ID of the project you selected, configure Cloud Shell to use your project.
 gcloud config set project [PROJECT_ID]
 
@@ -12,6 +20,7 @@ gcloud services enable container.googleapis.com \
 ```
 
 ## Create a GKE cluster that you will use to deploy the sample application.
+
 
 ```shell
 gcloud container clusters create hello-cloudbuild \
