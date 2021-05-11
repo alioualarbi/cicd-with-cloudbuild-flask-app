@@ -1,5 +1,5 @@
 # CI/CD With cloudbuild 
-
+![img]()
 If the ```gcloud config get-value project``` command does not return the ID of the project you selected, configure Cloud Shell to use your project.
 gcloud config set project [PROJECT_ID]
 
