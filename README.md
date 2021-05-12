@@ -54,7 +54,7 @@ gcloud source repos create hello-cloudbuild-env
 
 ```
 cd ~
-git clone https://github.com/GoogleCloudPlatform/gke-gitops-tutorial-cloudbuild \
+git clone https://github.com/alioualarbi/cicd-with-cloudbuild \
     hello-cloudbuild-app
 ```
 
