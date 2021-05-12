@@ -27,7 +27,7 @@ gcloud container clusters create hello-cloudbuild \
     --num-nodes 1 --zone us-central1-b
 ```
 
-## Use Git, configure it with your name and email address. Git will use those to identify you as the author of the commits you will create in Cloud Shell.
+## Use Git, configure it with your name and email address. Git will use those to identify you as the author of the commits
 
 ```shell
 git config --global user.email "[YOUR_EMAIL_ADDRESS]"
